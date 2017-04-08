@@ -1,0 +1,8 @@
+Parametre
+net_w 15
+net_h 10
+iteration_total 3
+rayon_init 5
+alpha_init 0.704583
+training_range 0.050000
+random_ecart 0.010000
