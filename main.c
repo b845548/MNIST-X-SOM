@@ -23,6 +23,28 @@ The labels values are 0 to 9.
 ........
 xxxx     unsigned byte   ??               pixel
 
+
+ TEST SET LABEL FILE (t10k-labels-idx1-ubyte):
+[offset] [type]          [value]          [description]
+0000     32 bit integer  0x00000801(2049) magic number (MSB first)
+0004     32 bit integer  10000            number of items
+0008     unsigned byte   ??               label
+0009     unsigned byte   ??               label
+........
+xxxx     unsigned byte   ??               label
+
+
+The labels values are 0 to 9.
+TEST SET IMAGE FILE (t10k-images-idx3-ubyte):
+[offset] [type]          [value]          [description]
+0000     32 bit integer  0x00000803(2051) magic number
+0004     32 bit integer  10000            number of images
+0008     32 bit integer  28               number of rows
+0012     32 bit integer  28               number of columns
+0016     unsigned byte   ??               pixel
+0017     unsigned byte   ??               pixel
+........
+xxxx     unsigned byte   ??               pixel
 */
 
 
@@ -52,7 +74,7 @@ int * genSuffledVector(int nbl){ // generer un vecteur avec des valeur de 0 à n
 }
 
 
-void normalisationVector(double * vec,int nbl,double norm){
+void normalisationVector(double * vec,int nbl,double norm){ // rammener les valeurs de vecteur entre 0.0 - 1.0
 	int i;
 	for(i=0;i<nbl;i++)
 		vec[i]/=norm;	
@@ -60,7 +82,7 @@ void normalisationVector(double * vec,int nbl,double norm){
 
 }
 
-double norm(double * vec,int nbl){
+double norm(double * vec,int nbl){ // calculer la norm d'un vecteur
 	int i;
 	double res=0.0;
 	for(i=0;i<nbl;i++)
@@ -70,7 +92,7 @@ double norm(double * vec,int nbl){
 
 }
 
-double randomNumber(double ecart){
+double randomNumber(double ecart){ // generer un nombre real entre 0.0 - ecart
 	return ecart*((double)rand() / (double)RAND_MAX);
 }
 
@@ -120,7 +142,6 @@ void initData(data_base * db,char * fileName){
 	val|=fgetc(fp)<<16;
 	val|=fgetc(fp)<<8;
 	val|=fgetc(fp);
-
 	switch(val){
 		case 2051:
         	printf("Init data\n");
@@ -145,29 +166,39 @@ void initData(data_base * db,char * fileName){
 					val=0;
 				}
 			}
+
 			db->data=(data_v *)malloc(sizeof(data_v)*db->data_nbl);
-		
+
 			for(j=0;1;j++){
 				db->data[j].v=(double *)malloc(sizeof(double)*db->data_len);
 				for(i=0;i<db->data_len;i++){
 					c=fgetc(fp);
+//                    if('\n'==c)            printf("nnnn\n");	
+
 					db->data[j].v[i]=c/(double)255;
 				}
 				db->data[j].norm=norm(db->data[j].v,db->data_len); 
 			//	normalisation(db->data[j].v,db->data_len,db->data[j].norm); 
-	
 				if(c==EOF)break;		
 			}  
+            
 			db->suffled_index=genSuffledVector(db->data_nbl);
 		break;
 
 		case 2049:
+            val=0;
             val|=fgetc(fp)<<24;
+//            printf("%d\n",val);	
 	        val|=fgetc(fp)<<16;
+//            printf("%d\n",val);	
 	        val|=fgetc(fp)<<8;
-   	        val|=fgetc(fp);
+//            printf("%d\n",val);	
+       	        val|=fgetc(fp);
+            printf("NB Labels %d\n",val);	
+
     		for(j=0;j<val;j++){
                 db->data[j].label=fgetc(fp);
+           // printf("%d\n",j);	
 			} 	
     	break;
 	
@@ -249,11 +280,15 @@ void freeBMU(best_matching_unit_Header *bmu){
 	}
 	bmu->nbl=0;
 }
-void freeData(data_base * db,network * net){
+void freeData(data_base * db,data_base * db2,network * net){
 int i;
 for(i=0;i<db->data_len;i++)
 	free(db->data[i].v);
 free(db->data);
+
+for(i=0;i<db2->data_len;i++)
+	free(db2->data[i].v);
+free(db2->data);
 
 for (i = 0; i < net->nb_nodes; i++)
 	free(net->nodes[i].weight);	
@@ -424,24 +459,6 @@ void initParametreRaffinage(network * net,parametre * pm){
 }
 
 
-void initEtiquet(data_base * db,network * net){
-	int i,j,k;
-	int max,min;
-	float act,save;
-	for(i=0;i<net->nb_nodes;i++){
-		for(j=0,min=0,save=1000;j<db->data_nbl;j++){
-			act=distanceEuclid(db->data[j].v, net->nodes[i].weight, db->data_len);
-			if(save == act)
-				printf("%d %d \n",db->vector[min].label,db->vector[j].label);
-	
-			if(save > act){
-				save=act;
-				min=j;
-			}	
-		}
-		net->nodes[i].label=db->vector[min].label;
-	}
-}
 
 
 void printCarte(network * net){
@@ -456,20 +473,73 @@ int i,j;
 	}
 }
 
+
+void initEtiquet(data_base * db,network * net){
+	int i,j;
+	int max,min;
+	float act,save;
+	for(i=0;i<net->nb_nodes;i++){
+		for(j=0,min=0,save=1000;j<db->data_nbl;j++){
+			act=distanceEuclid(db->data[j].v, net->nodes[i].weight, db->data_len);
+			if(save == act)
+				printf("%d %d \n",db->data[min].label,db->data[j].label);
+	
+			if(save > act){
+				save=act;
+				min=j;
+			}	
+		}
+		net->nodes[i].label=db->data[min].label;
+	}
+}
+
+
+void verifierErreur(data_base * db_verify,network * net){
+	int i,j,k;
+    int vrai=0,faux=0;
+	int max,min;
+	float act,save;
+		for(j=0;j<db_verify->data_nbl;j++){
+        	for(i=0,min=0,save=1000;i<net->nb_nodes;i++){
+			act=distanceEuclid(db_verify->data[j].v, net->nodes[i].weight, db_verify->data_len);
+			if(save == act)
+				printf("BMU : %d %d \n",db_verify->data[min].label,db_verify->data[j].label);
+	
+			if(save > act){
+				save=act;
+				min=j;
+			}	
+		}
+        if(net->nodes[min].label==db_verify->data[j].label)
+		    vrai++;
+        else
+		    faux++;
+	}
+    printf("les erreurs : %lf\n",faux/(double)db_verify->data_nbl);
+}
+
+
+
+
 int main (){
 // DECLARATION VARIABLE
   data_base db;
+  data_base db_verify;
   network net;
-  parametre phase1,phase2;
+  parametre phase1;
+  parametre phase2;
 // DECLARATION VARIABLE
 
 // INIT DONNEE
   initData(&db,"train-images-idx3-ubyte");
   initData(&db,"train-labels-idx1-ubyte");
+  initData(&db_verify,"t10k-images-idx3-ubyte");
+  initData(&db_verify,"t10k-labels-idx1-ubyte");
   initParametreNetwork(&net,&phase1);
   initNetwork(&db,&net,&phase1);
 // INIT DONNEE
-  
+
+
 // APPRENTISAGE ORDONNANCEMENT
   initParametreOrdonnancement(&net,&phase1);  
   apprentisage(&db,&net,&phase1);
@@ -486,11 +556,22 @@ int main (){
 // APPRENTISAGE RAFFIANGE
   
 
+// DONNER LES ETIQUETS
+  initEtiquet(&db,&net);
+// DONNER LES ETIQUETS
+
+
+// VERIFIER LES ERREURS
+  verifierErreur(&db_verify,&net);
+// VERIFIER LES ERREURS
+
+
 // SAUVGARDE DE PARAMETRE & LIBRATION DE MEMOIRE 
   sauvegardeParametre("phase1.txt",&phase1);
   sauvegardeParametre("phase2.txt",&phase2);
-  freeData(&db,&net);
+  freeData(&db,&db_verify,&net);
 // SAUVGARDE DE PARAMETRE & LIBRATION DE MEMOIRE
 
   return 0;
 }
+
