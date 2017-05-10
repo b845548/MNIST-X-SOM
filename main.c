@@ -126,7 +126,7 @@ double distanceEuclid(double * p, double * q,int nbl){
 
 
 
-void initData(data_base * db,char * fileName){
+void initData(data_base * db,const char * fileName){
 	FILE *fp;
 	int header;
 	int c;
@@ -281,18 +281,18 @@ void freeBMU(best_matching_unit_Header *bmu){
 	bmu->nbl=0;
 }
 void freeData(data_base * db,data_base * db2,network * net){
-int i;
-for(i=0;i<db->data_len;i++)
-	free(db->data[i].v);
-free(db->data);
+    int i;
+    for(i=0;i<db->data_len;i++)
+	    free(db->data[i].v);
+    free(db->data);
 
-for(i=0;i<db2->data_len;i++)
-	free(db2->data[i].v);
-free(db2->data);
+    for(i=0;i<db2->data_len;i++)
+	    free(db2->data[i].v);
+    free(db2->data);
 
-for (i = 0; i < net->nb_nodes; i++)
-	free(net->nodes[i].weight);	
-free(net->nodes);
+    for (i = 0; i < net->nb_nodes; i++)
+	    free(net->nodes[i].weight);	
+    free(net->nodes);
 }
 
 void parametrage(parametre * pm){
@@ -325,10 +325,11 @@ void voisinage(network * net,parametre * pm, best_matching_unit_Header * bmu, da
 
 }
 
-void sauvegardeImage(char *filename, data_base * db, network * net){
+void sauvegardeImage(const char *filename, data_base * db, network * net){
     FILE *fp;
     fp = fopen(filename, "wb");
-    if (!fp) {
+    if (!fp) 
+    {
          fprintf(stderr, "Unable to open file '%s'\n", filename);
          exit(1);
     }
@@ -338,9 +339,11 @@ void sauvegardeImage(char *filename, data_base * db, network * net){
     fprintf(fp, "%d\n",255);
 	int i,j,k,l;
     // appretisage peut faire atteindre 0 < pixel , 1 > pixel , on fix min 0.0 et max 1.0 
- 	for (i = 0; i < net->nb_nodes; i++){
-		for (j = 0; j < db->data_len; j++){
-			if(net->nodes[i].weight[j] < 0.0)
+ 	for (i = 0; i < net->nb_nodes; i++)
+    {
+		for (j = 0; j < db->data_len; j++)
+        {
+   			if(net->nodes[i].weight[j] < 0.0)
 				net->nodes[i].weight[j]=0.0;
 			if(net->nodes[i].weight[j] > 1.0)
 				net->nodes[i].weight[j]=1.0;
@@ -349,13 +352,13 @@ void sauvegardeImage(char *filename, data_base * db, network * net){
 
 	for(l=0;l<net->height;l++)
 		for(k=0;k<db->data_h;k++)
-				for(j=0;j<net->width;j++)
-				for(i=0;i<db->data_w;i++){
-				fputc((char)(net->nodes[j+l*net->width].weight[i+k*db->data_w]*255), fp);
-	    		fputc((char)(net->nodes[j+l*net->width].weight[i+k*db->data_w]*255), fp);
-	    		fputc((char)(net->nodes[j+l*net->width].weight[i+k*db->data_w]*255), fp);
-	    
-		}
+    		for(j=0;j<net->width;j++)
+   				for(i=0;i<db->data_w;i++)
+                {
+    				fputc((char)(net->nodes[j+l*net->width].weight[i+k*db->data_w]*255), fp);
+    	    		fputc((char)(net->nodes[j+l*net->width].weight[i+k*db->data_w]*255), fp);
+    	    		fputc((char)(net->nodes[j+l*net->width].weight[i+k*db->data_w]*255), fp);
+         		}
     fclose(fp);
 }
 
@@ -371,11 +374,13 @@ void apprentisage(data_base * db,network * net,parametre * pm){
 
   	clock_t t,pass;
 	pass=1;
-    for(;pm->it_current < pm->it_total;pm->it_current++){
+    for(;pm->it_current < pm->it_total;pm->it_current++)
+    {
 		t = clock();
  		parametrage(pm);	
 		printf("progress: %.2f%c(%d/%d) parcour: %d rayon: %d alpha: %f\n",(pm->it_current/(double)(pm->it_total))*100,'%',pm->it_current,pm->it_total,range,pm->rayon,pm->alpha);
-		for(j=0;j < range;j++){
+		for(j=0;j < range;j++)
+        {
 			randomData=&db->data[db->suffled_index[rand()%db->data_nbl]];
 			for(i=0;i<net->nb_nodes;i++)
 				net->nodes[i].activation=distanceEuclid(net->nodes[i].weight,randomData->v, db->data_len);
@@ -384,6 +389,7 @@ void apprentisage(data_base * db,network * net,parametre * pm){
 			parametrage(pm);
 			freeBMU(&bmu);
 		}
+
  		t = clock() - t;
 		pass+=t;
 		reste2=(double)(pm->it_total-pm->it_current-1)*t/CLOCKS_PER_SEC;
@@ -401,7 +407,7 @@ void apprentisage(data_base * db,network * net,parametre * pm){
 
 }
 
-void sauvegardeParametre(char *filename,parametre * pm){
+void sauvegardeParametre(const char *filename,parametre * pm){
     FILE *fp;
     fp = fopen(filename, "w");
     fprintf(fp, "Parametre\n");
@@ -476,7 +482,7 @@ int i,j;
 
 void initEtiquet(data_base * db,network * net){
 	int i,j;
-	int max,min;
+	int min;
 	float act,save;
 	for(i=0;i<net->nb_nodes;i++){
 		for(j=0,min=0,save=1000;j<db->data_nbl;j++){
@@ -495,9 +501,9 @@ void initEtiquet(data_base * db,network * net){
 
 
 void verifierErreur(data_base * db_verify,network * net){
-	int i,j,k;
+	int i,j;
     int vrai=0,faux=0;
-	int max,min;
+	int min;
 	float act,save;
 		for(j=0;j<db_verify->data_nbl;j++){
         	for(i=0,min=0,save=1000;i<net->nb_nodes;i++){
